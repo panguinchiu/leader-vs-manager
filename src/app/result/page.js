@@ -1,21 +1,30 @@
-import { getDb } from '../../../lib/db';
-import { PERSONAS, DIMENSION_LABELS } from '../../../lib/quiz-data';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { PERSONAS, DIMENSION_LABELS } from '../../lib/quiz-data';
+import { decodeResult } from '../../lib/submit';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+function ResultView() {
+  const [result, setResult] = useState(undefined);
+  useEffect(() => {
+    let code = new URLSearchParams(window.location.search).get('r');
+    if (!code) { try { code = sessionStorage.getItem('lvmResult'); } catch {} }
+    const d = code ? decodeResult(code) : null;
+    if (d && PERSONAS[d.p]) {
+      setResult({
+        persona_type: d.p,
+        leader_score: d.l,
+        manager_score: d.m,
+        dimension_scores: JSON.stringify(d.d || {}),
+        created_at: d.t || Date.now(),
+      });
+    } else {
+      setResult(null);
+    }
+  }, []);
 
-async function getResult(id) {
-  try {
-    const db = getDb();
-    const row = db.prepare('SELECT * FROM responses WHERE id = ?').get(id);
-    return row || null;
-  } catch {
-    return null;
-  }
-}
-
-export default async function ResultPage({ params }) {
-  const result = await getResult(params.id);
+  if (result === undefined) return null;
 
   if (!result) {
     return (
@@ -165,4 +174,8 @@ export default async function ResultPage({ params }) {
       </div>
     </>
   );
+}
+
+export default function ResultPage() {
+  return <ResultView />;
 }

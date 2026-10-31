@@ -5,15 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}"
+    "start": "npx serve out"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^12.8.0",
-    "jsonwebtoken": "^9.0.2",
     "next": "^14.2.35",
     "react": "^18",
-    "react-dom": "^18",
-    "uuid": "^9.0.1"
+    "react-dom": "^18"
   }
 }

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { QUESTIONS, PERSONAS, DIMENSION_LABELS, getPersona } from '../lib/quiz-data';
+import { BASE_PATH } from '../lib/config';
+import { sendToSheet, encodeResult } from '../lib/submit';
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -53,7 +55,7 @@ export default function QuizPage() {
     });
   }
 
-  async function handleOptionClick(questionIndex, optionIndex) {
+  function handleOptionClick(questionIndex, optionIndex) {
     const question = QUESTIONS[questionIndex];
     const option = question.options[optionIndex];
 
@@ -85,29 +87,17 @@ export default function QuizPage() {
       const personaResult = getPersona(newScores.leader, newScores.manager);
       setPersona(personaResult);
 
-      try {
-        const res = await fetch('/api/quiz/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            answers: newAnswers,
-            scores: newScores,
-            dimScores: newDimScores,
-            personaType: personaResult.key,
-            leaderPct: personaResult.leaderPct,
-            name,
-            grade,
-          }),
-        });
-        const data = await res.json();
-        if (data.id) {
-          setResultId(data.id);
-          // Update URL without navigating
-          window.history.pushState({}, '', `/result/${data.id}`);
-        }
-      } catch (e) {
-        console.error('Submit error:', e);
-      }
+      const shareCode = encodeResult({
+        p: personaResult.key,
+        l: newScores.leader,
+        m: newScores.manager,
+        d: newDimScores,
+        t: Date.now(),
+      });
+      try { sessionStorage.setItem('lvmResult', shareCode); } catch {}
+      setResultId(shareCode);
+      window.history.pushState({}, '', `${BASE_PATH}/result/?r=${shareCode}`);
+      sendToSheet({ name, grade, answers: newAnswers, scores: newScores, dimScores: newDimScores, persona: personaResult });
 
       setScreen('result');
     }
@@ -133,7 +123,7 @@ export default function QuizPage() {
   }
 
   function handleRetake() {
-    window.history.pushState({}, '', '/');
+    window.history.pushState({}, '', `${BASE_PATH}/`);
     setScreen('intro');
     setResultId(null);
     setPersona(null);
@@ -145,7 +135,7 @@ export default function QuizPage() {
 
   function handleShare() {
     if (resultId) {
-      const url = `${window.location.origin}/result/${resultId}`;
+      const url = `${window.location.origin}${BASE_PATH}/result/?r=${resultId}`;
       navigator.clipboard.writeText(url).then(() => {
         setShareMsg('連結已複製！');
         setTimeout(() => setShareMsg(''), 2500);
